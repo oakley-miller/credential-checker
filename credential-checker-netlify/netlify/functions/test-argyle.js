@@ -20,23 +20,38 @@ exports.handler = async (event) => {
     return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Missing credentials' }) };
   }
 
-  const url = env === 'prod'
-    ? 'https://api.argyle.com/v2/token'
-    : 'https://api-sandbox.argyle.com/v2/token';
+  // Argyle uses HTTP Basic Auth (client_id:client_secret) — no separate token endpoint
+  const baseUrl = env === 'prod'
+    ? 'https://api.argyle.com/v2'
+    : 'https://api-sandbox.argyle.com/v2';
+
+  const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
 
   try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: clientId,
-        client_secret: clientSecret,
-        grant_type: 'client_credentials'
-      }).toString()
+    const response = await fetch(`${baseUrl}/users?limit=1`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Basic ${basicAuth}`,
+        'Content-Type': 'application/json'
+      }
     });
 
     const data = await response.json().catch(() => ({}));
-    return { statusCode: 200, headers: CORS, body: JSON.stringify({ ok: response.ok, status: response.status, data }) };
+
+    // 200 = valid creds with data access
+    // 403 = valid creds but restricted scope (still authenticated)
+    // 401 = invalid credentials
+    const credentialsValid = response.status === 200 || response.status === 403;
+
+    return {
+      statusCode: 200,
+      headers: CORS,
+      body: JSON.stringify({
+        ok: credentialsValid,
+        status: response.status,
+        data
+      })
+    };
   } catch (error) {
     return { statusCode: 500, headers: CORS, body: JSON.stringify({ ok: false, error: error.message }) };
   }
