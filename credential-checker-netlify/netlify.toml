@@ -17,3 +17,13 @@
   from = "/api/test-xactus"
   to = "/.netlify/functions/test-xactus"
   status = 200
+
+[[redirects]]
+  from = "/api/test-truv"
+  to = "/.netlify/functions/test-truv"
+  status = 200
+
+[[redirects]]
+  from = "/api/test-accountchek"
+  to = "/.netlify/functions/test-accountchek"
+  status = 200

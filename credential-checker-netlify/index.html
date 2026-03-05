@@ -95,9 +95,11 @@
       text-transform: uppercase;
     }
 
-    .badge-argyle   { background: #e0e7ff; color: #3730a3; }
-    .badge-finicity { background: #fce7f3; color: #9d174d; }
-    .badge-xactus   { background: #d1fae5; color: #065f46; }
+    .badge-argyle      { background: #e0e7ff; color: #3730a3; }
+    .badge-finicity    { background: #fce7f3; color: #9d174d; }
+    .badge-xactus      { background: #d1fae5; color: #065f46; }
+    .badge-truv        { background: #fef3c7; color: #92400e; }
+    .badge-accountchek { background: #e0f2fe; color: #0369a1; }
 
     .form-grid {
       display: grid;
@@ -261,6 +263,8 @@
       <button class="tab-btn active" onclick="switchTab(event, 'argyle')">Argyle</button>
       <button class="tab-btn" onclick="switchTab(event, 'finicity')">Finicity</button>
       <button class="tab-btn" onclick="switchTab(event, 'xactus')">Xactus</button>
+      <button class="tab-btn" onclick="switchTab(event, 'truv')">Truv</button>
+      <button class="tab-btn" onclick="switchTab(event, 'accountchek')">AccountChek</button>
     </div>
 
     <!-- ARGYLE -->
@@ -294,7 +298,7 @@
       </div>
 
       <div id="argyle-result" class="result-box"></div>
-      <p class="hint">Tests OAuth2 token endpoint at <code>api-sandbox.argyle.com/v2/token</code> (sandbox) or <code>api.argyle.com/v2/token</code> (production).</p>
+      <p class="hint">Uses HTTP Basic Auth against <code>api-sandbox.argyle.com/v2/users</code> (sandbox) or <code>api.argyle.com/v2/users</code> (production). A 200 or 403 response confirms credentials are valid.</p>
     </div>
 
     <!-- FINICITY -->
@@ -373,6 +377,74 @@
       <p class="hint">Confirm the exact token endpoint URL with your Xactus integration spec and update <code>test-xactus.js</code> if needed.</p>
     </div>
 
+    <!-- TRUV -->
+    <div id="panel-truv" class="vendor-panel">
+      <div class="vendor-header">
+        <span class="vendor-badge badge-truv">Truv</span>
+        <span style="font-size:0.8rem;color:#64748b">Income & Employment (VOIE) · Header-based Auth</span>
+      </div>
+
+      <div class="env-toggle">
+        <button class="env-btn active" id="truv-env-sandbox" onclick="setEnv('truv','sandbox')">Sandbox</button>
+        <button class="env-btn" id="truv-env-prod" onclick="setEnv('truv','prod')">Production</button>
+      </div>
+
+      <div class="form-grid">
+        <div class="field">
+          <label>Client ID</label>
+          <input type="text" id="truv-client-id" placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
+        </div>
+        <div class="field">
+          <label>Client Secret</label>
+          <input type="password" id="truv-client-secret" placeholder="••••••••••••••••••••" />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn-test" onclick="testTruv()">
+          <span id="truv-spinner" class="spinner"></span>
+          Test Connection
+        </button>
+      </div>
+
+      <div id="truv-result" class="result-box"></div>
+      <p class="hint">Uses <code>X-Access-Client-Id</code> and <code>X-Access-Secret</code> headers against <code>dev.truv.com/v1/companies</code> (sandbox) or <code>prod.truv.com/v1/companies</code> (production).</p>
+    </div>
+
+    <!-- ACCOUNTCHEK -->
+    <div id="panel-accountchek" class="vendor-panel">
+      <div class="vendor-header">
+        <span class="vendor-badge badge-accountchek">AccountChek</span>
+        <span style="font-size:0.8rem;color:#64748b">Verification of Assets (VOA) · OAuth2</span>
+      </div>
+
+      <div class="env-toggle">
+        <button class="env-btn active" id="accountchek-env-sandbox" onclick="setEnv('accountchek','sandbox')">Sandbox</button>
+        <button class="env-btn" id="accountchek-env-prod" onclick="setEnv('accountchek','prod')">Production</button>
+      </div>
+
+      <div class="form-grid">
+        <div class="field">
+          <label>Client ID</label>
+          <input type="text" id="accountchek-client-id" placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
+        </div>
+        <div class="field">
+          <label>Client Secret</label>
+          <input type="password" id="accountchek-client-secret" placeholder="••••••••••••••••••••" />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn-test" onclick="testAccountChek()">
+          <span id="accountchek-spinner" class="spinner"></span>
+          Test Connection
+        </button>
+      </div>
+
+      <div id="accountchek-result" class="result-box"></div>
+      <p class="hint">⚠️ Confirm the exact token endpoint URL with your FormFree contact and update <code>test-accountchek.js</code> if needed.</p>
+    </div>
+
     <hr class="divider"/>
 
     <!-- TEST HISTORY -->
@@ -398,7 +470,7 @@
 </div>
 
 <script>
-  const envState = { argyle: 'sandbox', finicity: 'sandbox', xactus: 'sandbox' };
+  const envState = { argyle: 'sandbox', finicity: 'sandbox', xactus: 'sandbox', truv: 'sandbox', accountchek: 'sandbox' };
   const historyLog = [];
 
   function setEnv(vendor, env) {
@@ -462,11 +534,12 @@
         body: JSON.stringify({ clientId, clientSecret, env: envState.argyle })
       });
       const result = await res.json();
+      // 200 = valid, 403 = valid creds but scope-limited, 401 = invalid
       if (result.ok) {
         const scopeNote = result.status === 403 ? ' · Credentials recognized (scope may be limited)' : '';
         showResult('argyle', 'pass', 'Credentials valid', `HTTP ${result.status} — authenticated successfully · Env: ${envState.argyle}${scopeNote}`);
       } else {
-        const msg = result.data?.error_description || result.data?.message || result.error || 'Invalid credentials or insufficient permissions.';
+        const msg = result.data?.detail || result.data?.message || result.error || 'Invalid Client ID or Client Secret.';
         showResult('argyle', 'fail', `Auth failed (HTTP ${result.status || res.status})`, msg);
       }
     } catch (e) {
@@ -522,6 +595,55 @@
     } catch (e) {
       showResult('xactus', 'fail', 'Connection error', e.message);
     } finally { setLoading('xactus', false); }
+  }
+
+  // ─── TRUV ─────────────────────────────────────────────────────────────────
+  async function testTruv() {
+    const clientId     = document.getElementById('truv-client-id').value.trim();
+    const clientSecret = document.getElementById('truv-client-secret').value.trim();
+    if (!clientId || !clientSecret) return showResult('truv', 'warn', 'Missing credentials', 'Enter both Client ID and Client Secret.');
+    setLoading('truv', true);
+    try {
+      const res    = await fetch('/api/test-truv', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId, clientSecret, env: envState.truv })
+      });
+      const result = await res.json();
+      if (result.ok) {
+        const scopeNote = result.status === 403 ? ' · Credentials recognized (scope may be limited)' : '';
+        showResult('truv', 'pass', 'Credentials valid', `HTTP ${result.status} — authenticated successfully · Env: ${envState.truv}${scopeNote}`);
+      } else {
+        const msg = result.data?.detail || result.data?.message || result.error || 'Invalid Client ID or Client Secret.';
+        showResult('truv', 'fail', `Auth failed (HTTP ${result.status || res.status})`, msg);
+      }
+    } catch (e) {
+      showResult('truv', 'fail', 'Connection error', e.message);
+    } finally { setLoading('truv', false); }
+  }
+
+  // ─── ACCOUNTCHEK ──────────────────────────────────────────────────────────
+  async function testAccountChek() {
+    const clientId     = document.getElementById('accountchek-client-id').value.trim();
+    const clientSecret = document.getElementById('accountchek-client-secret').value.trim();
+    if (!clientId || !clientSecret) return showResult('accountchek', 'warn', 'Missing credentials', 'Enter both Client ID and Client Secret.');
+    setLoading('accountchek', true);
+    try {
+      const res    = await fetch('/api/test-accountchek', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId, clientSecret, env: envState.accountchek })
+      });
+      const result = await res.json();
+      if (result.ok) {
+        showResult('accountchek', 'pass', 'Credentials valid', `Token received · Env: ${envState.accountchek}`);
+      } else {
+        const msg = result.data?.error_description || result.data?.message || result.error || 'Invalid credentials. Confirm endpoint URL with FormFree if needed.';
+        showResult('accountchek', 'fail', `Auth failed (HTTP ${result.status || res.status})`, msg);
+      }
+    } catch (e) {
+      showResult('accountchek', 'fail', 'Connection error', e.message);
+    } finally { setLoading('accountchek', false); }
   }
 </script>
 </body>
