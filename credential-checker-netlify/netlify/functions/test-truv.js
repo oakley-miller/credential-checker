@@ -20,13 +20,15 @@ exports.handler = async (event) => {
     return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Missing credentials' }) };
   }
 
-  // Truv uses X-Access-Client-Id and X-Access-Secret headers
+  // Truv uses X-Access-Client-Id (API Key) and X-Access-Secret (API Secret)
+  // GET /v1/orders mirrors the exact endpoint nCino's integration uses —
+  // an empty array = valid creds, 401 "No such user" = invalid
   const baseUrl = env === 'prod'
     ? 'https://prod.truv.com/v1'
     : 'https://dev.truv.com/v1';
 
   try {
-    const response = await fetch(`${baseUrl}/companies`, {
+    const response = await fetch(`${baseUrl}/orders/`, {
       method: 'GET',
       headers: {
         'X-Access-Client-Id': clientId,
@@ -37,8 +39,9 @@ exports.handler = async (event) => {
 
     const data = await response.json().catch(() => ({}));
 
-    // 200 or 403 = credentials recognized; 401 = invalid
-    const credentialsValid = response.status === 200 || response.status === 403;
+    // 200 = credentials valid (returns order list, possibly empty)
+    // 401 = invalid — "No such user" means wrong API Key/Secret
+    const credentialsValid = response.status === 200;
 
     return {
       statusCode: 200,
