@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VOA / VOIE Credential Checker</title>
+  <style>
+    :root {
+      --ncino-blue: #003865;
+      --ncino-light: #0066CC;
+      --pass: #1a7a4a;
+      --pass-bg: #e6f5ed;
+      --fail: #b91c1c;
+      --fail-bg: #fef2f2;
+      --warn: #92400e;
+      --warn-bg: #fffbeb;
+      --border: #d1d5db;
+      --surface: #f9fafb;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f1f5f9;
+      color: #1e293b;
+      min-height: 100vh;
+      padding: 32px 16px;
+    }
+
+    .container { max-width: 820px; margin: 0 auto; }
+
+    header {
+      background: var(--ncino-blue);
+      color: white;
+      padding: 24px 28px;
+      border-radius: 10px 10px 0 0;
+    }
+
+    header h1 { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.01em; }
+    header p  { font-size: 0.85rem; opacity: 0.8; margin-top: 4px; }
+
+    .subheader {
+      background: #1d4ed8;
+      color: white;
+      font-size: 0.78rem;
+      padding: 8px 28px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .body { background: white; padding: 28px; border-radius: 0 0 10px 10px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+
+    .vendor-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 24px;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      padding: 10px 18px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      color: #64748b;
+      border-radius: 4px 4px 0 0;
+      transition: all 0.15s;
+    }
+
+    .tab-btn:hover { color: var(--ncino-blue); background: var(--surface); }
+    .tab-btn.active { color: var(--ncino-blue); border-bottom-color: var(--ncino-blue); }
+
+    .vendor-panel { display: none; }
+    .vendor-panel.active { display: block; }
+
+    .vendor-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .vendor-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .badge-argyle   { background: #e0e7ff; color: #3730a3; }
+    .badge-finicity { background: #fce7f3; color: #9d174d; }
+    .badge-xactus   { background: #d1fae5; color: #065f46; }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #475569;
+      margin-bottom: 5px;
+      letter-spacing: 0.01em;
+    }
+
+    .field input {
+      width: 100%;
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      padding: 9px 12px;
+      font-size: 0.875rem;
+      color: #1e293b;
+      transition: border-color 0.15s;
+      font-family: 'Courier New', monospace;
+    }
+
+    .field input:focus { outline: none; border-color: var(--ncino-light); box-shadow: 0 0 0 3px rgba(0,102,204,0.12); }
+
+    .env-toggle {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .env-btn {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      border: 1.5px solid var(--border);
+      cursor: pointer;
+      background: white;
+      color: #64748b;
+    }
+
+    .env-btn.active {
+      border-color: var(--ncino-light);
+      background: #eff6ff;
+      color: var(--ncino-blue);
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    .btn-test {
+      background: var(--ncino-blue);
+      color: white;
+      border: none;
+      padding: 10px 22px;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.15s;
+    }
+
+    .btn-test:hover { background: #002a4d; }
+    .btn-test:disabled { background: #94a3b8; cursor: not-allowed; }
+
+    .spinner {
+      width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .result-box {
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 0.85rem;
+      display: none;
+      margin-bottom: 14px;
+    }
+
+    .result-box.pass { background: var(--pass-bg); border: 1.5px solid #86efac; color: var(--pass); }
+    .result-box.fail { background: var(--fail-bg); border: 1.5px solid #fca5a5; color: var(--fail); }
+    .result-box.warn { background: var(--warn-bg); border: 1.5px solid #fcd34d; color: var(--warn); }
+
+    .result-icon { font-size: 1.1rem; margin-right: 6px; }
+    .result-title { font-weight: 700; font-size: 0.9rem; }
+    .result-detail { margin-top: 4px; font-size: 0.8rem; opacity: 0.85; }
+
+    .hint {
+      font-size: 0.76rem;
+      color: #94a3b8;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+
+    .divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+
+    .history-section { margin-top: 28px; }
+    .history-section h3 { font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    .history-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    .history-table th { text-align: left; padding: 6px 10px; background: var(--surface); color: #64748b; font-weight: 600; border-bottom: 1px solid var(--border); }
+    .history-table td { padding: 7px 10px; border-bottom: 1px solid #f1f5f9; color: #334155; }
+    .history-table tr:last-child td { border-bottom: none; }
+
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
+    .pill-pass { background: var(--pass-bg); color: var(--pass); }
+    .pill-fail { background: var(--fail-bg); color: var(--fail); }
+
+    #clear-history {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      cursor: pointer;
+      background: none;
+      border: none;
+      float: right;
+      margin-top: -2px;
+    }
+
+    #clear-history:hover { color: var(--fail); }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>🔐 VOA / VOIE Credential Checker</h1>
+    <p>Validate lender vendor credentials without running a full loan application</p>
+  </header>
+  <div class="subheader">
+    <span>⚡ For Support & CSM use only — do not share lender credentials outside this tool</span>
+  </div>
+
+  <div class="body">
+
+    <div class="vendor-tabs">
+      <button class="tab-btn active" onclick="switchTab(event, 'argyle')">Argyle</button>
+      <button class="tab-btn" onclick="switchTab(event, 'finicity')">Finicity</button>
+      <button class="tab-btn" onclick="switchTab(event, 'xactus')">Xactus</button>
+    </div>
+
+    <!-- ARGYLE -->
+    <div id="panel-argyle" class="vendor-panel active">
+      <div class="vendor-header">
+        <span class="vendor-badge badge-argyle">Argyle</span>
+        <span style="font-size:0.8rem;color:#64748b">Income & Employment (VOIE) · API Key Auth</span>
+      </div>
+
+      <div class="env-toggle">
+        <button class="env-btn active" id="argyle-env-sandbox" onclick="setEnv('argyle','sandbox')">Sandbox</button>
+        <button class="env-btn" id="argyle-env-prod" onclick="setEnv('argyle','prod')">Production</button>
+      </div>
+
+      <div class="form-grid">
+        <div class="field">
+          <label>Client ID</label>
+          <input type="text" id="argyle-client-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+        </div>
+        <div class="field">
+          <label>Client Secret</label>
+          <input type="password" id="argyle-client-secret" placeholder="••••••••••••••••••••" />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn-test" onclick="testArgyle()">
+          <span id="argyle-spinner" class="spinner"></span>
+          Test Connection
+        </button>
+      </div>
+
+      <div id="argyle-result" class="result-box"></div>
+      <p class="hint">Tests OAuth2 token endpoint at <code>api-sandbox.argyle.com/v2/token</code> (sandbox) or <code>api.argyle.com/v2/token</code> (production).</p>
+    </div>
+
+    <!-- FINICITY -->
+    <div id="panel-finicity" class="vendor-panel">
+      <div class="vendor-header">
+        <span class="vendor-badge badge-finicity">Finicity</span>
+        <span style="font-size:0.8rem;color:#64748b">Assets & Income (VOA/VOIE) · Partner Auth</span>
+      </div>
+
+      <div class="env-toggle">
+        <button class="env-btn active" id="finicity-env-sandbox" onclick="setEnv('finicity','sandbox')">Sandbox</button>
+        <button class="env-btn" id="finicity-env-prod" onclick="setEnv('finicity','prod')">Production</button>
+      </div>
+
+      <div class="form-grid">
+        <div class="field">
+          <label>Partner ID</label>
+          <input type="text" id="finicity-partner-id" placeholder="1234567890" />
+        </div>
+        <div class="field">
+          <label>Partner Secret</label>
+          <input type="password" id="finicity-partner-secret" placeholder="••••••••••••••••••••" />
+        </div>
+        <div class="field" style="grid-column: 1 / -1">
+          <label>App Key (Finicity-App-Key header)</label>
+          <input type="text" id="finicity-app-key" placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn-test" onclick="testFinicity()">
+          <span id="finicity-spinner" class="spinner"></span>
+          Test Connection
+        </button>
+      </div>
+
+      <div id="finicity-result" class="result-box"></div>
+      <p class="hint">Tests <code>POST /aggregation/v2/partners/authentication</code>. A successful call returns a token — credentials are valid.</p>
+    </div>
+
+    <!-- XACTUS -->
+    <div id="panel-xactus" class="vendor-panel">
+      <div class="vendor-header">
+        <span class="vendor-badge badge-xactus">Xactus</span>
+        <span style="font-size:0.8rem;color:#065f46">Verification of Assets · API Key Auth</span>
+      </div>
+
+      <div class="env-toggle">
+        <button class="env-btn active" id="xactus-env-sandbox" onclick="setEnv('xactus','sandbox')">Sandbox</button>
+        <button class="env-btn" id="xactus-env-prod" onclick="setEnv('xactus','prod')">Production</button>
+      </div>
+
+      <div class="form-grid">
+        <div class="field">
+          <label>Client ID / Username</label>
+          <input type="text" id="xactus-client-id" placeholder="lender_clientid" />
+        </div>
+        <div class="field">
+          <label>Client Secret / Password</label>
+          <input type="password" id="xactus-client-secret" placeholder="••••••••••••••••••••" />
+        </div>
+        <div class="field" style="grid-column: 1 / -1">
+          <label>Subscriber ID <span style="font-weight:400;color:#94a3b8">(if applicable)</span></label>
+          <input type="text" id="xactus-subscriber-id" placeholder="Optional" />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn-test" onclick="testXactus()">
+          <span id="xactus-spinner" class="spinner"></span>
+          Test Connection
+        </button>
+      </div>
+
+      <div id="xactus-result" class="result-box"></div>
+      <p class="hint">Confirm the exact token endpoint URL with your Xactus integration spec and update <code>test-xactus.js</code> if needed.</p>
+    </div>
+
+    <hr class="divider"/>
+
+    <!-- TEST HISTORY -->
+    <div class="history-section">
+      <h3>Session Test History <button id="clear-history" onclick="clearHistory()">Clear</button></h3>
+      <table class="history-table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Vendor</th>
+            <th>Environment</th>
+            <th>Result</th>
+            <th>Detail</th>
+          </tr>
+        </thead>
+        <tbody id="history-body">
+          <tr><td colspan="5" style="color:#94a3b8;padding:12px 10px">No tests run yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const envState = { argyle: 'sandbox', finicity: 'sandbox', xactus: 'sandbox' };
+  const historyLog = [];
+
+  function setEnv(vendor, env) {
+    envState[vendor] = env;
+    document.getElementById(`${vendor}-env-sandbox`).classList.toggle('active', env === 'sandbox');
+    document.getElementById(`${vendor}-env-prod`).classList.toggle('active', env === 'prod');
+  }
+
+  function switchTab(event, vendor) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.vendor-panel').forEach(p => p.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('panel-' + vendor).classList.add('active');
+  }
+
+  function showResult(vendor, type, title, detail) {
+    const box = document.getElementById(`${vendor}-result`);
+    const icons = { pass: '✅', fail: '❌', warn: '⚠️' };
+    box.className = `result-box ${type}`;
+    box.style.display = 'block';
+    box.innerHTML = `<span class="result-icon">${icons[type]}</span><span class="result-title">${title}</span><div class="result-detail">${detail}</div>`;
+    historyLog.unshift({ time: new Date().toLocaleTimeString(), vendor, env: envState[vendor], result: type, title });
+    renderHistory();
+  }
+
+  function setLoading(vendor, loading) {
+    const btn = document.querySelector(`#panel-${vendor} .btn-test`);
+    const spinner = document.getElementById(`${vendor}-spinner`);
+    btn.disabled = loading;
+    spinner.style.display = loading ? 'inline-block' : 'none';
+  }
+
+  function renderHistory() {
+    const tbody = document.getElementById('history-body');
+    if (!historyLog.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="color:#94a3b8;padding:12px 10px">No tests run yet.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = historyLog.map(h => `
+      <tr>
+        <td>${h.time}</td>
+        <td style="font-weight:600">${h.vendor.charAt(0).toUpperCase() + h.vendor.slice(1)}</td>
+        <td>${h.env}</td>
+        <td><span class="pill ${h.result === 'pass' ? 'pill-pass' : 'pill-fail'}">${h.result === 'pass' ? '✓ Valid' : '✗ Failed'}</span></td>
+        <td style="color:#64748b">${h.title}</td>
+      </tr>`).join('');
+  }
+
+  function clearHistory() { historyLog.length = 0; renderHistory(); }
+
+  // ─── ARGYLE ───────────────────────────────────────────────────────────────
+  async function testArgyle() {
+    const clientId     = document.getElementById('argyle-client-id').value.trim();
+    const clientSecret = document.getElementById('argyle-client-secret').value.trim();
+    if (!clientId || !clientSecret) return showResult('argyle', 'warn', 'Missing credentials', 'Enter both Client ID and Client Secret.');
+    setLoading('argyle', true);
+    try {
+      const res    = await fetch('/api/test-argyle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId, clientSecret, env: envState.argyle })
+      });
+      const result = await res.json();
+      if (result.ok && result.data?.access_token) {
+        showResult('argyle', 'pass', 'Credentials valid', `Token received · Expires in ${result.data.expires_in || '?'}s · Env: ${envState.argyle}`);
+      } else {
+        const msg = result.data?.error_description || result.data?.message || result.error || 'Invalid credentials or insufficient permissions.';
+        showResult('argyle', 'fail', `Auth failed (HTTP ${result.status || res.status})`, msg);
+      }
+    } catch (e) {
+      showResult('argyle', 'fail', 'Connection error', e.message);
+    } finally { setLoading('argyle', false); }
+  }
+
+  // ─── FINICITY ─────────────────────────────────────────────────────────────
+  async function testFinicity() {
+    const partnerId     = document.getElementById('finicity-partner-id').value.trim();
+    const partnerSecret = document.getElementById('finicity-partner-secret').value.trim();
+    const appKey        = document.getElementById('finicity-app-key').value.trim();
+    if (!partnerId || !partnerSecret || !appKey) return showResult('finicity', 'warn', 'Missing credentials', 'Partner ID, Partner Secret, and App Key are all required.');
+    setLoading('finicity', true);
+    try {
+      const res    = await fetch('/api/test-finicity', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ partnerId, partnerSecret, appKey, env: envState.finicity })
+      });
+      const result = await res.json();
+      if (result.ok && result.data?.token) {
+        showResult('finicity', 'pass', 'Credentials valid', `Token received · Env: ${envState.finicity}`);
+      } else {
+        const msg = result.data?.message || result.data?.title || result.error || 'Check Partner ID, Secret, or App Key.';
+        showResult('finicity', 'fail', `Auth failed (HTTP ${result.status || res.status})`, msg);
+      }
+    } catch (e) {
+      showResult('finicity', 'fail', 'Connection error', e.message);
+    } finally { setLoading('finicity', false); }
+  }
+
+  // ─── XACTUS ───────────────────────────────────────────────────────────────
+  async function testXactus() {
+    const clientId     = document.getElementById('xactus-client-id').value.trim();
+    const clientSecret = document.getElementById('xactus-client-secret').value.trim();
+    const subscriberId = document.getElementById('xactus-subscriber-id').value.trim();
+    if (!clientId || !clientSecret) return showResult('xactus', 'warn', 'Missing credentials', 'Client ID and Client Secret are required.');
+    setLoading('xactus', true);
+    try {
+      const res    = await fetch('/api/test-xactus', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId, clientSecret, subscriberId, env: envState.xactus })
+      });
+      const result = await res.json();
+      if (result.ok && (result.data?.access_token || result.data?.token)) {
+        showResult('xactus', 'pass', 'Credentials valid', `Token received · Env: ${envState.xactus}`);
+      } else {
+        const msg = result.data?.error_description || result.data?.message || result.error || 'Invalid credentials.';
+        showResult('xactus', 'fail', `Auth failed (HTTP ${result.status || res.status})`, msg);
+      }
+    } catch (e) {
+      showResult('xactus', 'fail', 'Connection error', e.message);
+    } finally { setLoading('xactus', false); }
+  }
+</script>
+</body>
+</html>

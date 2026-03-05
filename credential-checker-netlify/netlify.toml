@@ -1,0 +1,19 @@
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+# Route /api/* to the Netlify functions
+[[redirects]]
+  from = "/api/test-argyle"
+  to = "/.netlify/functions/test-argyle"
+  status = 200
+
+[[redirects]]
+  from = "/api/test-finicity"
+  to = "/.netlify/functions/test-finicity"
+  status = 200
+
+[[redirects]]
+  from = "/api/test-xactus"
+  to = "/.netlify/functions/test-xactus"
+  status = 200
