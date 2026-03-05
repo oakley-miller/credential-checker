@@ -262,7 +262,6 @@
     <div class="vendor-tabs">
       <button class="tab-btn active" onclick="switchTab(event, 'argyle')">Argyle</button>
       <button class="tab-btn" onclick="switchTab(event, 'finicity')">Finicity</button>
-      <button class="tab-btn" onclick="switchTab(event, 'xactus')">Xactus</button>
       <button class="tab-btn" onclick="switchTab(event, 'truv')">Truv</button>
       <button class="tab-btn" onclick="switchTab(event, 'accountchek')">AccountChek</button>
     </div>
@@ -339,44 +338,6 @@
       <p class="hint">Tests <code>POST /aggregation/v2/partners/authentication</code>. A successful call returns a token — credentials are valid.</p>
     </div>
 
-    <!-- XACTUS -->
-    <div id="panel-xactus" class="vendor-panel">
-      <div class="vendor-header">
-        <span class="vendor-badge badge-xactus">Xactus</span>
-        <span style="font-size:0.8rem;color:#065f46">Verification of Assets · API Key Auth</span>
-      </div>
-
-      <div class="env-toggle">
-        <button class="env-btn active" id="xactus-env-sandbox" onclick="setEnv('xactus','sandbox')">Sandbox</button>
-        <button class="env-btn" id="xactus-env-prod" onclick="setEnv('xactus','prod')">Production</button>
-      </div>
-
-      <div class="form-grid">
-        <div class="field">
-          <label>Client ID / Username</label>
-          <input type="text" id="xactus-client-id" placeholder="lender_clientid" />
-        </div>
-        <div class="field">
-          <label>Client Secret / Password</label>
-          <input type="password" id="xactus-client-secret" placeholder="••••••••••••••••••••" />
-        </div>
-        <div class="field" style="grid-column: 1 / -1">
-          <label>Subscriber ID <span style="font-weight:400;color:#94a3b8">(if applicable)</span></label>
-          <input type="text" id="xactus-subscriber-id" placeholder="Optional" />
-        </div>
-      </div>
-
-      <div class="actions">
-        <button class="btn-test" onclick="testXactus()">
-          <span id="xactus-spinner" class="spinner"></span>
-          Test Connection
-        </button>
-      </div>
-
-      <div id="xactus-result" class="result-box"></div>
-      <p class="hint">Confirm the exact token endpoint URL with your Xactus integration spec and update <code>test-xactus.js</code> if needed.</p>
-    </div>
-
     <!-- TRUV -->
     <div id="panel-truv" class="vendor-panel">
       <div class="vendor-header">
@@ -391,12 +352,12 @@
 
       <div class="form-grid">
         <div class="field">
-          <label>Client ID</label>
-          <input type="text" id="truv-client-id" placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
+          <label>API Key <span style="font-weight:400;color:#94a3b8">(username)</span></label>
+          <input type="text" id="truv-client-id" placeholder="c8b63216d7564ce98c083f522a5068ea" />
         </div>
         <div class="field">
-          <label>Client Secret</label>
-          <input type="password" id="truv-client-secret" placeholder="••••••••••••••••••••" />
+          <label>API Secret <span style="font-weight:400;color:#94a3b8">(password)</span></label>
+          <input type="password" id="truv-client-secret" placeholder="sandbox-xxxx or prod-xxxx" />
         </div>
       </div>
 
@@ -408,7 +369,7 @@
       </div>
 
       <div id="truv-result" class="result-box"></div>
-      <p class="hint">Uses <code>X-Access-Client-Id</code> and <code>X-Access-Secret</code> headers against <code>dev.truv.com/v1/companies</code> (sandbox) or <code>prod.truv.com/v1/companies</code> (production).</p>
+      <p class="hint">⚠️ Common mistake: lenders often enter their Truv <em>login</em> email/password instead of their API Key &amp; Secret. API Secret is typically prefixed with <code>sandbox-</code> or <code>prod-</code>. Tests <code>GET /v1/orders/</code> — the same endpoint nCino's integration uses.</p>
     </div>
 
     <!-- ACCOUNTCHEK -->
@@ -470,7 +431,7 @@
 </div>
 
 <script>
-  const envState = { argyle: 'sandbox', finicity: 'sandbox', xactus: 'sandbox', truv: 'sandbox', accountchek: 'sandbox' };
+  const envState = { argyle: 'sandbox', finicity: 'sandbox', truv: 'sandbox', accountchek: 'sandbox' };
   const historyLog = [];
 
   function setEnv(vendor, env) {
@@ -570,31 +531,6 @@
     } catch (e) {
       showResult('finicity', 'fail', 'Connection error', e.message);
     } finally { setLoading('finicity', false); }
-  }
-
-  // ─── XACTUS ───────────────────────────────────────────────────────────────
-  async function testXactus() {
-    const clientId     = document.getElementById('xactus-client-id').value.trim();
-    const clientSecret = document.getElementById('xactus-client-secret').value.trim();
-    const subscriberId = document.getElementById('xactus-subscriber-id').value.trim();
-    if (!clientId || !clientSecret) return showResult('xactus', 'warn', 'Missing credentials', 'Client ID and Client Secret are required.');
-    setLoading('xactus', true);
-    try {
-      const res    = await fetch('/api/test-xactus', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clientId, clientSecret, subscriberId, env: envState.xactus })
-      });
-      const result = await res.json();
-      if (result.ok && (result.data?.access_token || result.data?.token)) {
-        showResult('xactus', 'pass', 'Credentials valid', `Token received · Env: ${envState.xactus}`);
-      } else {
-        const msg = result.data?.error_description || result.data?.message || result.error || 'Invalid credentials.';
-        showResult('xactus', 'fail', `Auth failed (HTTP ${result.status || res.status})`, msg);
-      }
-    } catch (e) {
-      showResult('xactus', 'fail', 'Connection error', e.message);
-    } finally { setLoading('xactus', false); }
   }
 
   // ─── TRUV ─────────────────────────────────────────────────────────────────
