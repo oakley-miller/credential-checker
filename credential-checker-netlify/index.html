@@ -462,8 +462,9 @@
         body: JSON.stringify({ clientId, clientSecret, env: envState.argyle })
       });
       const result = await res.json();
-      if (result.ok && result.data?.access_token) {
-        showResult('argyle', 'pass', 'Credentials valid', `Token received · Expires in ${result.data.expires_in || '?'}s · Env: ${envState.argyle}`);
+      if (result.ok) {
+        const scopeNote = result.status === 403 ? ' · Credentials recognized (scope may be limited)' : '';
+        showResult('argyle', 'pass', 'Credentials valid', `HTTP ${result.status} — authenticated successfully · Env: ${envState.argyle}${scopeNote}`);
       } else {
         const msg = result.data?.error_description || result.data?.message || result.error || 'Invalid credentials or insufficient permissions.';
         showResult('argyle', 'fail', `Auth failed (HTTP ${result.status || res.status})`, msg);
